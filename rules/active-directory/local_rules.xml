@@ -1,0 +1,152 @@
+<group name="active_directory,windows,local,">
+  <!-- Authentification et force brute -->
+  <rule id="100600" level="5">
+    <if_sid>60104</if_sid>
+    <field name="win.system.eventID">^4625$</field>
+    <description>Active Directory: echec d'ouverture de session Windows</description>
+    <group>authentication_failed,</group>
+    <mitre><id>T1110</id></mitre>
+  </rule>
+  <rule id="100601" level="10" frequency="8" timeframe="120">
+    <if_matched_sid>100600</if_matched_sid>
+    <same_field>win.eventdata.ipAddress</same_field>
+    <description>Active Directory: force brute (8+ echecs en 2 min depuis la meme source)</description>
+    <group>authentication_failed,attack,</group>
+    <mitre><id>T1110.001</id></mitre>
+  </rule>
+  <rule id="100602" level="10" frequency="8" timeframe="300">
+    <if_matched_sid>100600</if_matched_sid>
+    <same_field>win.eventdata.targetUserName</same_field>
+    <description>Active Directory: pulverisation de mots de passe (meme utilisateur cible)</description>
+    <group>authentication_failed,attack,</group>
+    <mitre><id>T1110.003</id></mitre>
+  </rule>
+  <rule id="100603" level="5">
+    <if_sid>60104</if_sid>
+    <field name="win.system.eventID">^4771$</field>
+    <description>Active Directory: echec de pre-authentification Kerberos</description>
+    <group>authentication_failed,</group>
+    <mitre><id>T1110</id></mitre>
+  </rule>
+  <rule id="100604" level="10" frequency="8" timeframe="120">
+    <if_matched_sid>100603</if_matched_sid>
+    <same_field>win.eventdata.ipAddress</same_field>
+    <description>Active Directory: force brute Kerberos (echecs de pre-authentification repetes)</description>
+    <group>authentication_failed,attack,</group>
+    <mitre><id>T1110.001</id></mitre>
+  </rule>
+  <rule id="100605" level="8">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4740$</field>
+    <description>Active Directory: compte utilisateur verrouille</description>
+    <group>authentication_failed,</group>
+  </rule>
+  <!-- Attaques Kerberos et vol d'identifiants -->
+  <rule id="100606" level="12">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4769$</field>
+    <field name="win.eventdata.ticketOptions" type="pcre2">0x40810000</field>
+    <field name="win.eventdata.ticketEncryptionType" type="pcre2">0x17</field>
+    <options>no_full_log</options>
+    <description>Active Directory: attaque Kerberoasting probable (TGS en RC4)</description>
+    <group>credential_access,attack,</group>
+    <mitre><id>T1558.003</id></mitre>
+  </rule>
+  <rule id="100607" level="12">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4768$</field>
+    <field name="win.eventdata.preAuthType" type="pcre2">^0$</field>
+    <field name="win.eventdata.ticketEncryptionType" type="pcre2">0x17</field>
+    <options>no_full_log</options>
+    <description>Active Directory: AS-REP Roasting probable (TGT sans pre-authentification, RC4)</description>
+    <group>credential_access,attack,</group>
+    <mitre><id>T1558.004</id></mitre>
+  </rule>
+  <rule id="100608" level="12">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4624$</field>
+    <field name="win.eventdata.logonGuid" type="pcre2">\{00000000-0000-0000-0000-000000000000\}</field>
+    <field name="win.eventdata.logonType" type="pcre2">^3$</field>
+    <options>no_full_log</options>
+    <description>Active Directory: Golden Ticket probable (ouverture de session sans LogonGuid)</description>
+    <group>lateral_movement,attack,</group>
+    <mitre><id>T1558.001</id></mitre>
+  </rule>
+  <rule id="100609" level="12">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4662$</field>
+    <field name="win.eventdata.properties" type="pcre2">{1131f6aa-9c07-11d1-f79f-00c04fc2dcd2}|{19195a5b-6da0-11d0-afd3-00c04fd930c9}</field>
+    <options>no_full_log</options>
+    <description>Active Directory: DCSync probable (replication d'annuaire)</description>
+    <group>credential_access,attack,</group>
+    <mitre><id>T1003.006</id></mitre>
+  </rule>
+  <rule id="100610" level="0">
+    <if_sid>100609</if_sid>
+    <field name="win.eventdata.subjectUserName" type="pcre2">\$$</field>
+    <description>Active Directory: replication legitime par un compte machine (ignoree)</description>
+  </rule>
+  <!-- Gestion des comptes et persistance -->
+  <rule id="100611" level="8">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4720$</field>
+    <description>Active Directory: creation d'un compte de domaine</description>
+    <group>account_changes,</group>
+    <mitre><id>T1136.002</id></mitre>
+  </rule>
+  <rule id="100612" level="8">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4726$</field>
+    <description>Active Directory: suppression d'un compte de domaine</description>
+    <group>account_changes,</group>
+  </rule>
+  <rule id="100613" level="8">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4724$</field>
+    <description>Active Directory: reinitialisation d'un mot de passe de compte</description>
+    <group>account_changes,</group>
+    <mitre><id>T1098</id></mitre>
+  </rule>
+  <!-- Elevation de privileges (groupes de securite) -->
+  <rule id="100614" level="8">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID" type="pcre2">^4728$|^4732$|^4756$</field>
+    <description>Active Directory: ajout d'un membre a un groupe de securite</description>
+    <group>account_changes,</group>
+    <mitre><id>T1098</id></mitre>
+  </rule>
+  <rule id="100615" level="13">
+    <if_sid>100614</if_sid>
+    <field name="win.eventdata.targetUserName" type="pcre2">Domain Admins|Enterprise Admins|Schema Admins|Administrators|Account Operators|Backup Operators|Group Policy Creator Owners</field>
+    <description>Active Directory: ajout d'un membre a un groupe d'administration sensible</description>
+    <group>privilege_escalation,attack,</group>
+    <mitre><id>T1078.002</id></mitre>
+  </rule>
+  <rule id="100616" level="8">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID" type="pcre2">^4729$|^4733$|^4757$</field>
+    <description>Active Directory: retrait d'un membre d'un groupe de securite</description>
+    <group>account_changes,</group>
+  </rule>
+  <!-- Anti-forensique et actions a haut risque -->
+  <rule id="100617" level="14">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^1102$</field>
+    <description>Active Directory: journal de securite Windows efface - anti-forensique possible</description>
+    <group>attack,audit_change,</group>
+    <mitre><id>T1070.001</id></mitre>
+  </rule>
+  <rule id="100618" level="12">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4794$</field>
+    <description>Active Directory: tentative de definition du mot de passe DSRM</description>
+    <group>attack,persistence,</group>
+    <mitre><id>T1207</id></mitre>
+  </rule>
+  <rule id="100619" level="6">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^5136$</field>
+    <description>Active Directory: modification d'un objet du service d'annuaire</description>
+    <group>directory_change,</group>
+  </rule>
+</group>

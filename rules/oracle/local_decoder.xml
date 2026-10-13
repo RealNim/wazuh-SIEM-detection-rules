@@ -1,0 +1,25 @@
+<decoder name="oracle-alert">
+  <prematch>ORA-\d+|ORACLE instance|Starting ORACLE|Shutting down instance</prematch>
+</decoder>
+<decoder name="oracle-alert-errcode">
+  <parent>oracle-alert</parent>
+  <prematch>ORA-</prematch>
+  <regex>ORA-(\d+)</regex>
+  <order>oracle.error_code</order>
+</decoder>
+<decoder name="oracle-audit">
+  <prematch>ACTION :|DATABASE USER:|PRIVILEGE :</prematch>
+</decoder>
+<decoder name="oracle-audit-action">
+  <parent>oracle-audit</parent>
+  <regex>ACTION :\[\d+\] '(\.+)'</regex>
+  <order>oracle.action</order>
+</decoder>
+<decoder name="oracle-audit-dbuser">
+  <parent>oracle-audit</parent>
+  <regex>DATABASE USER:\[\d+\] '(\.+)'</regex>
+  <order>oracle.db_user</order>
+</decoder>
+<decoder name="oracle-listener">
+  <prematch>\* establish \*|TNS-\d+|\* CONNECT_DATA</prematch>
+</decoder>

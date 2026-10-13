@@ -1,0 +1,129 @@
+<group name="sql_server,windows,local,">
+  <rule id="100400" level="0">
+    <if_sid>60009</if_sid>
+    <field name="win.system.providerName">MSSQLSERVER</field>
+    <description>SQL Server: evenement detecte</description>
+    <options>no_log</options>
+  </rule>
+  <rule id="100401" level="5">
+    <if_sid>100400</if_sid>
+    <field name="win.system.eventID">^18456$</field>
+    <description>SQL Server: echec de connexion</description>
+    <group>authentication_failed,</group>
+    <mitre><id>T1110</id></mitre>
+  </rule>
+  <rule id="100402" level="10" frequency="5" timeframe="120">
+    <if_matched_sid>100401</if_matched_sid>
+    <same_srcip />
+    <description>SQL Server: brute force (5+ echecs en 2 min depuis la meme IP)</description>
+    <group>authentication_failed,attack,</group>
+    <mitre><id>T1110.001</id></mitre>
+  </rule>
+  <rule id="100403" level="10" frequency="5" timeframe="120">
+    <if_matched_sid>100401</if_matched_sid>
+    <same_field>win.eventdata.targetUserName</same_field>
+    <description>SQL Server: brute force par nom d'utilisateur (5+ echecs en 2 min)</description>
+    <group>authentication_failed,attack,</group>
+    <mitre><id>T1110.001</id></mitre>
+  </rule>
+  <rule id="100404" level="3">
+    <if_sid>100400</if_sid>
+    <field name="win.system.eventID">^18454$</field>
+    <description>SQL Server: connexion reussie</description>
+    <group>authentication_success,</group>
+  </rule>
+  <rule id="100405" level="12">
+    <if_sid>100404</if_sid>
+    <match>sa</match>
+    <description>SQL Server: connexion avec le compte SA integre detectee</description>
+    <group>attack,authentication_success,</group>
+    <mitre><id>T1078.002</id></mitre>
+  </rule>
+  <rule id="100406" level="10">
+    <if_sid>100400</if_sid>
+    <match>SERVER_ROLE_MEMBER_CHANGE_GROUP|GROUPE_MODIFICATION_MEMBRE</match>
+    <description>SQL Server: modification de role serveur</description>
+    <group>privilege_escalation,attack,</group>
+    <mitre><id>T1078.002</id></mitre>
+  </rule>
+  <rule id="100407" level="10">
+    <if_sid>100400</if_sid>
+    <match>SERVER_PERMISSION_CHANGE_GROUP|GROUPE_MODIFICATION_AUTORISATIONS_SERVEUR</match>
+    <description>SQL Server: modification de permissions serveur</description>
+    <group>privilege_escalation,attack,</group>
+    <mitre><id>T1078.002</id></mitre>
+  </rule>
+  <rule id="100408" level="10">
+    <if_sid>100400</if_sid>
+    <match>DATABASE_OBJECT_PERMISSION_CHANGE_GROUP</match>
+    <description>SQL Server: modification de permissions base de donnees</description>
+    <group>privilege_escalation,database_change,</group>
+    <mitre><id>T1078.002</id></mitre>
+  </rule>
+  <rule id="100409" level="10">
+    <if_sid>100400</if_sid>
+    <match>DATABASE_PRINCIPAL_CHANGE_GROUP</match>
+    <description>SQL Server: utilisateur ou role base de donnees modifie</description>
+    <group>privilege_escalation,database_change,</group>
+    <mitre><id>T1136</id></mitre>
+  </rule>
+  <rule id="100410" level="12">
+    <if_sid>100400</if_sid>
+    <match>AUDIT_CHANGE_GROUP|GROUPE_MODIFICATION_AUDIT</match>
+    <description>SQL Server: modification de la configuration d'audit</description>
+    <group>audit_change,attack,</group>
+    <mitre><id>T1562.002</id></mitre>
+  </rule>
+  <rule id="100411" level="8">
+    <if_sid>100400</if_sid>
+    <match>DATABASE_OBJECT_CHANGE_GROUP</match>
+    <description>SQL Server: modification d'objet base de donnees (DDL)</description>
+    <group>sql_ddl,database_change,</group>
+    <mitre><id>T1485</id></mitre>
+  </rule>
+  <rule id="100412" level="5">
+    <if_sid>100400</if_sid>
+    <match>DATABASE_EXECUTE_PROCEDURE_GROUP</match>
+    <description>SQL Server: execution de procedure stockee</description>
+    <group>sql_exec,</group>
+  </rule>
+  <rule id="100413" level="14">
+    <if_sid>100412</if_sid>
+    <match>xp_cmdshell</match>
+    <description>SQL Server: xp_cmdshell execute - execution de commande OS possible</description>
+    <group>attack,sql_injection,</group>
+    <mitre><id>T1059.003</id></mitre>
+  </rule>
+  <rule id="100414" level="8">
+    <match>Severity: 1[6-9]|Severity: 2[0-5]|Login failed for user|Cannot open database</match>
+    <description>SQL Server ERRORLOG: erreur haute severite</description>
+    <group>sql_errorlog,</group>
+  </rule>
+  <rule id="100415" level="6">
+    <match>SQLServerAgent</match>
+    <match>job|Job</match>
+    <description>SQL Server Agent: activite de job detectee</description>
+    <group>sql_agent,</group>
+  </rule>
+  <rule id="100416" level="10">
+    <if_sid>100415</if_sid>
+    <match>failed|error|Error</match>
+    <description>SQL Server Agent: echec de job - verifier une eventuelle alteration</description>
+    <group>sql_agent,attack,</group>
+  </rule>
+  <rule id="100417" level="14">
+    <if_sid>60009</if_sid>
+    <field name="win.system.eventID">^1102$</field>
+    <description>Journal de securite Windows efface - anti-forensique possible</description>
+    <group>attack,audit_change,</group>
+    <mitre><id>T1070.001</id></mitre>
+  </rule>
+  <rule id="100418" level="8">
+    <if_sid>60009</if_sid>
+    <field name="win.system.eventID">^4672$</field>
+    <field name="win.system.providerName">Microsoft-Windows-Security-Auditing</field>
+    <description>Connexion avec privileges sur l'hote SQL Server</description>
+    <group>authentication_success,privilege_escalation,</group>
+    <mitre><id>T1078.002</id></mitre>
+  </rule>
+</group>

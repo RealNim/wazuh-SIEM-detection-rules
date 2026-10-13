@@ -1,0 +1,126 @@
+<group name="oracle,database,local,">
+  <rule id="100500" level="0">
+    <decoded_as>oracle-alert</decoded_as>
+    <description>Oracle: evenement alert log detecte</description>
+    <options>no_log</options>
+  </rule>
+  <rule id="100501" level="5">
+    <if_sid>100500</if_sid>
+    <match>ORA-01017</match>
+    <description>Oracle: echec d'authentification (ORA-01017)</description>
+    <group>authentication_failed,</group>
+    <mitre><id>T1110</id></mitre>
+  </rule>
+  <rule id="100502" level="10" frequency="5" timeframe="120">
+    <if_matched_sid>100501</if_matched_sid>
+    <same_srcip />
+    <description>Oracle: brute force (5+ echecs en 2 min depuis la meme IP)</description>
+    <group>authentication_failed,attack,</group>
+    <mitre><id>T1110.001</id></mitre>
+  </rule>
+  <rule id="100503" level="10">
+    <if_sid>100500</if_sid>
+    <match>ORA-00600|ORA-07445|ORA-04031</match>
+    <description>Oracle: erreur interne critique - corruption ou tentative d'exploitation possible</description>
+    <group>system_error,</group>
+  </rule>
+  <rule id="100504" level="8">
+    <if_sid>100500</if_sid>
+    <match>Shutting down instance|Starting up ORACLE Database Software|ORACLE instance shut down</match>
+    <description>Oracle: demarrage ou arret de l'instance detecte</description>
+    <group>system_event,</group>
+    <mitre><id>T1529</id></mitre>
+  </rule>
+  <rule id="100505" level="0">
+    <decoded_as>oracle-audit</decoded_as>
+    <description>Oracle: enregistrement d'audit detecte</description>
+    <options>no_log</options>
+  </rule>
+  <rule id="100506" level="8">
+    <if_sid>100505</if_sid>
+    <match>SYSDBA|SYSOPER</match>
+    <description>Oracle: connexion avec privileges SYSDBA ou SYSOPER</description>
+    <group>authentication_success,privilege_escalation,</group>
+    <mitre><id>T1078.002</id></mitre>
+  </rule>
+  <rule id="100507" level="10">
+    <if_sid>100505</if_sid>
+    <match>SCOTT|DBSNMP|OUTLN|ANONYMOUS|CTXSYS|MDSYS|ORDSYS|ORDPLUGINS</match>
+    <description>Oracle: connexion avec un compte par defaut Oracle detectee</description>
+    <group>attack,authentication_success,</group>
+    <mitre><id>T1078.001</id></mitre>
+  </rule>
+  <rule id="100508" level="6">
+    <if_sid>100505</if_sid>
+    <regex>ACTION :\[\d+\] .(CREATE|DROP|ALTER|TRUNCATE)</regex>
+    <description>Oracle: operation DDL detectee sur un objet de base de donnees</description>
+    <group>database_change,</group>
+    <mitre><id>T1485</id></mitre>
+  </rule>
+  <rule id="100509" level="10">
+    <if_sid>100505</if_sid>
+    <regex>ACTION :\[\d+\] .(GRANT|REVOKE)</regex>
+    <description>Oracle: modification de privileges (GRANT/REVOKE)</description>
+    <group>privilege_escalation,database_change,</group>
+    <mitre><id>T1078</id></mitre>
+  </rule>
+  <rule id="100510" level="12">
+    <if_sid>100505</if_sid>
+    <match>UTL_FILE|UTL_HTTP|UTL_TCP|UTL_SMTP|DBMS_JAVA|DBMS_SCHEDULER|DBMS_PIPE</match>
+    <description>Oracle: utilisation d'un package ou procedure potentiellement dangereux</description>
+    <group>attack,</group>
+    <mitre><id>T1059</id></mitre>
+  </rule>
+  <rule id="100511" level="14">
+    <if_sid>100505</if_sid>
+    <match>EXTERNAL_SCRIPT|DBMS_JAVA.RUNJAVA|java.lang.Runtime|host command</match>
+    <description>Oracle: execution de commande OS depuis Oracle - compromission probable</description>
+    <group>attack,</group>
+    <mitre><id>T1059.004</id></mitre>
+  </rule>
+  <rule id="100512" level="12">
+    <if_sid>100505</if_sid>
+    <regex>ACTION :\[\d+\] .NOAUDIT|ACTION :\[\d+\] .AUDIT </regex>
+    <description>Oracle: modification ou desactivation de la configuration d'audit</description>
+    <group>audit_change,attack,</group>
+    <mitre><id>T1562.002</id></mitre>
+  </rule>
+  <rule id="100513" level="0">
+    <decoded_as>oracle-listener</decoded_as>
+    <description>Oracle: evenement listener TNS detecte</description>
+    <options>no_log</options>
+  </rule>
+  <rule id="100514" level="5">
+    <if_sid>100513</if_sid>
+    <match>TNS-12541|TNS-12545|TNS-12514|TNS-12538|TNS-01169|TNS-01190</match>
+    <description>Oracle: echec de connexion sur le listener TNS</description>
+    <group>network_error,</group>
+    <mitre><id>T1110</id></mitre>
+  </rule>
+  <rule id="100515" level="10" frequency="5" timeframe="120">
+    <if_matched_sid>100514</if_matched_sid>
+    <same_srcip />
+    <description>Oracle: brute force sur le listener TNS (5+ echecs en 2 min)</description>
+    <group>network_error,attack,</group>
+    <mitre><id>T1110.001</id></mitre>
+  </rule>
+  <rule id="100516" level="12">
+    <if_sid>100513</if_sid>
+    <match>stop|set password|set log_status off|save_config</match>
+    <description>Oracle: commande d'administration sensible executee sur le listener</description>
+    <group>attack,audit_change,</group>
+    <mitre><id>T1562.001</id></mitre>
+  </rule>
+  <rule id="100517" level="8">
+    <match>expdp|impdp|Data Pump|DATAPUMP</match>
+    <description>Oracle: export ou import massif de donnees detecte (Data Pump)</description>
+    <group>data_exfiltration,</group>
+    <mitre><id>T1048.003</id></mitre>
+  </rule>
+  <rule id="100518" level="14">
+    <match>No audit record found|audit trail.*deleted|Clearing the Oracle Audit Trail|DBMS_AUDIT_MGMT.CLEAN_AUDIT_TRAIL</match>
+    <description>Oracle: effacement de la trace d'audit - anti-forensique possible</description>
+    <group>attack,audit_change,</group>
+    <mitre><id>T1070</id></mitre>
+  </rule>
+</group>

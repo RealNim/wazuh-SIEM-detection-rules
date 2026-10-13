@@ -1,0 +1,69 @@
+<group name="nginx,web,local,">
+  <!-- Acces a chemins sensibles -->
+  <rule id="100300" level="1">
+    <if_sid>31100</if_sid>
+    <url>/\.env|/\.git|/phpmyadmin|/admin|/config|/backup|/db|/debug</url>
+    <description>Nginx: Acces a un chemin sensible (regle de base)</description>
+    <options>no_log</options>
+  </rule>
+  <rule id="100301" level="10" frequency="5" timeframe="120">
+    <if_matched_sid>100300</if_matched_sid>
+    <same_srcip />
+    <description>Nginx: Acces repetes a des chemins sensibles depuis la meme IP</description>
+    <group>recon,web_scan,attack,</group>
+  </rule>
+  <!-- Brute force authentification -->
+  <rule id="100302" level="12">
+    <if_sid>31151</if_sid>
+    <url>/login|/signin|/auth|/session|/oauth|/user/login|/account/login</url>
+    <description>Nginx: Tentative probable de brute force sur un endpoint d'authentification</description>
+    <group>authentication_attack,attack,</group>
+  </rule>
+  <!-- Injection SQL -->
+  <rule id="100303" level="13">
+    <if_sid>31106</if_sid>
+    <url>union.*select|select.*from|insert.*into|drop.*table|update.*set|or.*=.*|and.*=.*|xp_cmdshell|information_schema|load_file|benchmark\(|sleep\(|waitfor.*delay|concat\(</url>
+    <description>Nginx: Injection SQL confirmee (reponse HTTP 200)</description>
+    <group>sql_injection,attack,</group>
+  </rule>
+  <!-- Traversal / fichiers systeme -->
+  <rule id="100304" level="13">
+    <if_sid>31106</if_sid>
+    <url>\.\./|%2e%2e|%252e%252e|/etc/passwd|/etc/shadow|/proc/self/environ|/proc/version|/root/.ssh|/boot.ini|win.ini</url>
+    <description>Nginx: Tentative d'acces a des fichiers systeme ou traversal (reponse HTTP 200)</description>
+    <group>attack,</group>
+  </rule>
+  <!-- Detection de scanners -->
+  <rule id="100305" level="3">
+    <if_group>web</if_group>
+    <match>sqlmap|nikto|gobuster|dirsearch|ffuf|wpscan|nmap|masscan</match>
+    <description>Nginx: Detection d'un outil de scan (regle de base)</description>
+    <options>no_log</options>
+  </rule>
+  <rule id="100306" level="12" frequency="3" timeframe="60">
+    <if_matched_sid>100305</if_matched_sid>
+    <same_srcip />
+    <description>Nginx: Activite de scan automatise confirmee</description>
+    <group>recon,attack,</group>
+  </rule>
+  <!-- Attaques XSS -->
+  <rule id="100307" level="13">
+    <if_group>web</if_group>
+    <match>&lt;script&gt;|%3Cscript%3E|javascript:|onerror=|onload=|alert\(|document\.cookie|eval\(</match>
+    <description>Nginx: Detection d'un payload XSS (regle de base)</description>
+    <options>no_log</options>
+  </rule>
+  <rule id="100308" level="15" frequency="3" timeframe="120">
+    <if_matched_sid>100307</if_matched_sid>
+    <same_srcip />
+    <description>Nginx: Tentatives repetees d'attaque XSS</description>
+    <group>attack,xss,</group>
+  </rule>
+  <!-- Webshell / execution de commandes -->
+  <rule id="100309" level="12">
+    <if_group>web</if_group>
+    <url>/uploads/.*\.php|/tmp/.*\.php|/images/.*\.php|cmd=|exec=|shell=|passthru=|system\(</url>
+    <description>Nginx: Tentative probable d'acces a un webshell ou d'execution de commande</description>
+    <group>attack,webshell,</group>
+  </rule>
+</group>
